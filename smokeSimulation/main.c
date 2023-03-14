@@ -1,4 +1,5 @@
 #define GLFW_INCLUDE_NONE
+#define point(x, y)  ((x) + (y) * nodes)
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+
+float i = 0.0f;
 
 struct Particle {
 
@@ -37,55 +40,115 @@ struct Particle {
 
 };
 
-typedef struct Particle Particle;
-
-Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) {
-    Particle* cube = malloc(sizeof(*cube));
-    int node = size;
-
-    cube->size = node;
-    cube->timeStep = timeS;
-    cube->diffusion = diffusion;
-    cube->viscosity = viscosity;
-    cube->density0 = calloc(node * node, sizeof(float));
-    cube->density = calloc(node * node, sizeof(float));
-    //Current velocities X and Y
-    cube->VelX = calloc(node * node, sizeof(float));
-    cube->VelY = calloc(node * node, sizeof(float));
-    //previous velocities X and Y
-    cube->VelX0 = calloc(node * node, sizeof(float));
-    cube->VelY0 = calloc(node * node, sizeof(float));
-
-    return cube;
-}
-
-void addDensity(Particle* cube, int x, int y, float amount) {
-
-}
-
-static const struct
+struct vert
 {
     float x, y;
     float r, g, b;
-} vertices[3] =
-{
-    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
-    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
-    {   0.f,  0.6f, 0.f, 0.f, 1.f }
 };
 
+typedef struct vert vert;
+typedef struct Particle Particle;
 
+Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) {
+    Particle* quad = malloc(sizeof(*quad));
+    int nodes = size;
+
+    quad->size = nodes;
+    quad->timeStep = timeS;
+    quad->diffusion = diffusion;
+    quad->viscosity = viscosity;
+    //Current density
+    quad->density = calloc(nodes * nodes, sizeof(float));
+    //previous density
+    quad->density0 = calloc(nodes * nodes, sizeof(float));
+    //Current velocities X and Y
+    quad->VelX = calloc(nodes * nodes, sizeof(float));
+    quad->VelY = calloc(nodes * nodes, sizeof(float));
+    //previous velocities X and Y
+    quad->VelX0 = calloc(nodes * nodes, sizeof(float));
+    quad->VelY0 = calloc(nodes * nodes, sizeof(float));
+
+    return quad;
+}
+
+vert* setupVerts(float x, float y, float r, float g, float b) {
+    vert* v = malloc(sizeof(*v));
+    v->x = x;
+    v->y = y;
+    v->r = r;
+    v->g = g;
+    v->b = b;
+
+    return v;
+
+}
+
+void addDensity(Particle* quad, int x, int y, float amount) {
+    int nodes = quad->size;
+    quad->density[point(x, y)] += amount;
+}
+
+void addVelocity(Particle* quad, int x, int y, float xChange, float yChange) {
+    int nodes = quad->size;
+    int location = point(x, y);
+
+    quad->VelX[location] += xChange;
+    quad->VelY[location] += yChange;
+}
+
+createVertexShader()
+{
+
+}
+
+
+
+
+//vertices[1] =
+//{
+//    { 0.0f, 0.0f, 0.f, 0.f, 0.f }
+//};
+
+
+
+//vertices[3] =
+//{
+//    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
+//    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
+//    {   0.f,  0.6f, 0.f, 0.f, 1.f }
+//};
+
+
+
+
+//(vertex clip) MVP - Model View Projection
+//vertex position is modified by the MVP
+//(Color) vCol - vertex color
+//(world) vPos - vertex of model 
+//gl_position = vClip 
 static const char* vertex_shader_text =
 "#version 110\n"
 "uniform mat4 MVP;\n"
 "attribute vec3 vCol;\n"
 "attribute vec2 vPos;\n"
-"varying vec3 color;\n"
+"attribute vec3 color;\n"
 "void main()\n"
 "{\n"
 "    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
 "    color = vCol;\n"
 "}\n";
+
+//static const char* vertex_shader_point =
+//"#version 110\n"
+//"uniform mat4 MVP;\n"
+//"attribute vec3 vCol;\n"
+//"attribute vec2 vPos;\n"
+//"varying vec3 color;\n"
+//"void main()\n"
+//"{\n"
+//"    gl_Position = MVP * vec2(vPos);\n"
+//"    color = vCol;\n"
+//"}\n";
 
 static const char* fragment_shader_text =
 "#version 110\n"
@@ -110,6 +173,50 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 }
 
+//void draw(vert* v) 
+//{
+//    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
+//   // GLint mvp_location, vpos_location, vcol_location;
+//    float xCord = v->x;
+//    float yCord = v->y;
+//    float vertices[] = {
+//        xCord, yCord, 0.0f
+//    };
+//    //================================================openGL pipeline============================================
+//    //STEP 1 
+//    //Vertex Input
+//    glGenBuffers(1, &vertex_buffer);
+//    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+//
+//    glEnableVertexAttribArray(0);
+//    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+//    glPointSize(10);
+//    glDrawArrays(GL_POINTS, 0, 100 * 100);
+//    glDisableVertexAttribArray(0);
+//}
+
+
+void draw(float x, float y, float z)
+{
+    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
+    // GLint mvp_location, vpos_location, vcol_location;
+    float vertices[] = {
+        x, y, 0.0f
+    };
+    //================================================openGL pipeline============================================
+    //STEP 1 
+    //Vertex Input
+    glGenBuffers(1, &vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glPointSize(10);
+    glDrawArrays(GL_POINTS, 0, 100 * 100);
+    glDisableVertexAttribArray(0);
+}
 
 int main(void)
 {
@@ -128,8 +235,6 @@ int main(void)
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window;
-    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location;
 
 
 
@@ -143,145 +248,58 @@ int main(void)
         return -1;
     }
 
+    //Checking for keystrokes in the window
     glfwSetKeyCallback(window, key_callback);
-
+    //Setting window context for shaders
     glfwMakeContextCurrent(window);
     gladLoadGL(glfwGetProcAddress);
+    //Limits the number of swapped buffers that can happen. This will reduce screen tearing
     glfwSwapInterval(1);
-
-    ////TESTING
-    //float vertices[] = {
-    //0.5f, 0.5f, 0.0f,
-    //-0.5f, 0.5f, 0.0f,
-    //-0.5f, -0.5f, 0.0f,
-    //0.5f, -0.5f, 0.0f
-
-    //};
-
-
-    //Vertex Input
-    glGenBuffers(1, &vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    //Vertex Shader to handle vertices
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
-    glCompileShader(vertex_shader);
-    //Check success of shader compile
-    int success;
-    char log[1024];
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-
-    if (!success)
-    {
-        glGetShaderInfoLog(vertex_shader, 1024, NULL, log);
-        printf("Vertex Shader compiliation failed\n");
-    }
-
-    //Fragment Shader - this will calculate color output to the pixels
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
-    glCompileShader(fragment_shader);
-
-    //Create Shader program to link vertex shader and fragment shader
-    program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-    //Check success of shader link
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        glGetProgramInfoLog(program, 1024, NULL, log);
-    }
-
-    //setting values to link vertex attributes
-    mvp_location = glGetUniformLocation(program, "MVP");
-    vpos_location = glGetAttribLocation(program, "vPos");
-    vcol_location = glGetAttribLocation(program, "vCol");
-
-    //Linking vertex attributes
-    glEnableVertexAttribArray(vpos_location);
-    //parameters 1 - vertex attribute to configure, 2 - vec size 1|2|3|4, 3 - data type|vec are always floats, 4 - Normalize; Only for integer input, 
-    //5 - stride value or space between consecutive vertex attributes, 6 - offset of position data begins
-    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)0);
-    glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)(sizeof(float) * 2));
-    //Stopping point
-
-    //VERTEX INPUT
-    //setting up our vertex buffer object
-    //unsigned int VAO;
-    //Generate buffer ID
-    //glGenBuffers(1, &VAO);
-    //Bind multiple buffers at once
-    //glBindBuffer(GL_ARRAY_BUFFER, VAO);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
-    //VERTEX INPUT
-
-    //VERTEX SHADER / FRAGMENT SHADER
+    
+    //setting up time
+    float time = glfwGetTime();
+    float speed = 10.0f;
+    float x = 0.0f, y = 0.0f, z = 0.0f;
+    vert* v = setupVerts(i, i, i, i, i);
 
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
+        float timeS = glfwGetTime();
+        float deltaTime = timeS - time;
+
+
+
+        
+
+
+        //Point
         int width, height;
-        mat4x4 m, p, mvp;
         glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float)height;
-
-
-        glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        mat4x4_identity(m);
-        mat4x4_rotate_Z(m, m, (float)glfwGetTime());
-        mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        mat4x4_mul(mvp, p, m);
-
-
-        glUseProgram(program);
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*)mvp);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-
-
-
+        //glViewport(0, 0, width, height);
+        //glClear(GL_COLOR_BUFFER_BIT);
+        //glUseProgram(program);
+        //for (float i = 0.f; i < 10.f; i++) {
+        //    v->x = i;
+        //    v->y = i;
+        //    v->r = i;
+        //    v->g = i;
+        //    v->b = i;
+        //}
+        x = x + speed * deltaTime;
+        if (x > 400.0f)
+        {
+            x = 0.0f;
+        }
+        draw(x, y, z);
+        //glDrawArrays(GL_POINT, 0, 1);
 
         //We are switch the back and front buffers to render the entire frame and swawpt them
         glfwSwapBuffers(window);
-        //Limits the number of swapped buffers that can happen. This will reduce screen tearing
+
         //glfwSwapInterval(1);
         //This will process events by polling and waiting for event sot happen.
         glfwPollEvents();
 
-        //glEnableVertexAttribArray(0);
-        //glEnableVertexAttribArray(4);
-
-
-
-
-        
-
-        //render(window);
-        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        //glClear(GL_COLOR_BUFFER_BIT);
-        //GLint a = 0;
-        //GLsizei b = 256;
-        //glDrawArrays(GL_LINES, a, b);
-        //glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-        // input
-        // -----
-   
-
-        // render
-        // ------
-        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        //glClear(GL_COLOR_BUFFER_BIT);
-
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
-        
     }
     glfwDestroyWindow(window);
     glfwTerminate();
