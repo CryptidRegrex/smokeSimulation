@@ -38,15 +38,17 @@ struct Particle {
     float* VelX0; //Previous velocity represented as u
     float* VelY0; //Previous velocity represented as u
 
+    //location of particle
+    float* vertX;
+    float* vertY; 
+
+    //color of particle
+    float* r;
+    float* g;
+    float* b;
+
 };
 
-struct vert
-{
-    float x, y;
-    float r, g, b;
-};
-
-typedef struct vert vert;
 typedef struct Particle Particle;
 
 Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) {
@@ -67,21 +69,28 @@ Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) 
     //previous velocities X and Y
     quad->VelX0 = calloc(nodes * nodes, sizeof(float));
     quad->VelY0 = calloc(nodes * nodes, sizeof(float));
+    //Current vertex of pixel
+    quad->vertX = calloc(nodes * nodes, sizeof(float));
+    quad->vertY = calloc(nodes * nodes, sizeof(float));
+    //Current color of the pixle
+    quad->r = calloc(nodes * nodes, sizeof(float));
+    quad->g = calloc(nodes * nodes, sizeof(float));
+    quad->b = calloc(nodes * nodes, sizeof(float));
 
     return quad;
 }
 
-vert* setupVerts(float x, float y, float r, float g, float b) {
-    vert* v = malloc(sizeof(*v));
-    v->x = x;
-    v->y = y;
-    v->r = r;
-    v->g = g;
-    v->b = b;
-
-    return v;
-
-}
+//vert* setupVerts(float x, float y, float r, float g, float b) {
+//    vert* v = malloc(sizeof(*v));
+//    v->x = x;
+//    v->y = y;
+//    v->r = r;
+//    v->g = g;
+//    v->b = b;
+//
+//    return v;
+//
+//}
 
 void addDensity(Particle* quad, int x, int y, float amount) {
     int nodes = quad->size;
@@ -103,24 +112,6 @@ createVertexShader()
 
 
 
-
-//vertices[1] =
-//{
-//    { 0.0f, 0.0f, 0.f, 0.f, 0.f }
-//};
-
-
-
-//vertices[3] =
-//{
-//    { -0.6f, -0.4f, 1.f, 0.f, 0.f },
-//    {  0.6f, -0.4f, 0.f, 1.f, 0.f },
-//    {   0.f,  0.6f, 0.f, 0.f, 1.f }
-//};
-
-
-
-
 //(vertex clip) MVP - Model View Projection
 //vertex position is modified by the MVP
 //(Color) vCol - vertex color
@@ -138,17 +129,6 @@ static const char* vertex_shader_text =
 "    color = vCol;\n"
 "}\n";
 
-//static const char* vertex_shader_point =
-//"#version 110\n"
-//"uniform mat4 MVP;\n"
-//"attribute vec3 vCol;\n"
-//"attribute vec2 vPos;\n"
-//"varying vec3 color;\n"
-//"void main()\n"
-//"{\n"
-//"    gl_Position = MVP * vec2(vPos);\n"
-//"    color = vCol;\n"
-//"}\n";
 
 static const char* fragment_shader_text =
 "#version 110\n"
@@ -197,7 +177,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 //}
 
 
-void draw(float x, float y, float z)
+void draw(float x, float y)
 {
     GLuint vertex_buffer, vertex_shader, fragment_shader, program;
     // GLint mvp_location, vpos_location, vcol_location;
@@ -222,7 +202,7 @@ int main(void)
 {
 
 
-    //Particle* p = ParticleCreation(256, 1, 0, 0);
+    Particle* p = ParticleCreation(256, 1, 0, 0);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(error_callback);
@@ -260,17 +240,12 @@ int main(void)
     float time = glfwGetTime();
     float speed = 10.0f;
     float x = 0.0f, y = 0.0f, z = 0.0f;
-    vert* v = setupVerts(i, i, i, i, i);
+    //vert* v = setupVerts(i, i, i, i, i);
 
     while (!glfwWindowShouldClose(window))
     {
         float timeS = glfwGetTime();
         float deltaTime = timeS - time;
-
-
-
-        
-
 
         //Point
         int width, height;
@@ -278,19 +253,16 @@ int main(void)
         //glViewport(0, 0, width, height);
         //glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(program);
-        //for (float i = 0.f; i < 10.f; i++) {
-        //    v->x = i;
-        //    v->y = i;
-        //    v->r = i;
-        //    v->g = i;
-        //    v->b = i;
-        //}
         x = x + speed * deltaTime;
+        y = y + speed * deltaTime;
+        *p->vertX = x;
+        *p->vertY = y;
+        
         if (x > 400.0f)
         {
             x = 0.0f;
         }
-        draw(x, y, z);
+        draw(*p->vertX, y);
         //glDrawArrays(GL_POINT, 0, 1);
 
         //We are switch the back and front buffers to render the entire frame and swawpt them
