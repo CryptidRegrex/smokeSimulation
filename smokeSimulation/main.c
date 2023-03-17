@@ -238,12 +238,15 @@ int main(void)
     
     //setting up time
     float time = glfwGetTime();
-    float speed = 10.0f;
+    float speed = .1f;
     float x = 0.0f, y = 0.0f, z = 0.0f;
     //vert* v = setupVerts(i, i, i, i, i);
 
+    //printf(*p)
+
     while (!glfwWindowShouldClose(window))
     {
+        float tStep = (((float)rand() / (float)(RAND_MAX)) * 0.1f);
         float timeS = glfwGetTime();
         float deltaTime = timeS - time;
 
@@ -253,8 +256,8 @@ int main(void)
         //glViewport(0, 0, width, height);
         //glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(program);
-        x = x + speed * deltaTime;
-        y = y + speed * deltaTime;
+        x = x + tStep * deltaTime;
+        y = y + tStep * deltaTime;
         *p->vertX = x;
         *p->vertY = y;
         
@@ -262,7 +265,11 @@ int main(void)
         {
             x = 0.0f;
         }
-        draw(*p->vertX, y);
+        for (int x = 0; x < p->size; x++)
+        {
+            draw(*p->vertX, y);
+        }
+        
         //glDrawArrays(GL_POINT, 0, 1);
 
         //We are switch the back and front buffers to render the entire frame and swawpt them
