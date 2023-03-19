@@ -80,16 +80,16 @@ Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) 
     return quad;
 }
 
-//vert* setupVerts(float x, float y, float r, float g, float b) {
-//    vert* v = malloc(sizeof(*v));
-//    v->x = x;
-//    v->y = y;
-//    v->r = r;
-//    v->g = g;
-//    v->b = b;
+
+
+//void addParticles(int size, float* x, float* s, float dt)
+//{
+//    int i, nodes = (size + 2) * (size + 2);
 //
-//    return v;
-//
+//    for (i = 0; i < nodes; i++)
+//    {
+//        x[i] += dt * s[i];
+//    }
 //}
 
 void addDensity(Particle* quad, int x, int y, float amount) {
@@ -112,32 +112,6 @@ createVertexShader()
 
 
 
-//(vertex clip) MVP - Model View Projection
-//vertex position is modified by the MVP
-//(Color) vCol - vertex color
-//(world) vPos - vertex of model 
-//gl_position = vClip 
-static const char* vertex_shader_text =
-"#version 110\n"
-"uniform mat4 MVP;\n"
-"attribute vec3 vCol;\n"
-"attribute vec2 vPos;\n"
-"attribute vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    color = vCol;\n"
-"}\n";
-
-
-static const char* fragment_shader_text =
-"#version 110\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_FragColor = vec4(color, 1.0);\n"
-"}\n";
-
 
 static void error_callback(int error, const char* description)
 {
@@ -153,28 +127,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 }
 
-//void draw(vert* v) 
-//{
-//    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
-//   // GLint mvp_location, vpos_location, vcol_location;
-//    float xCord = v->x;
-//    float yCord = v->y;
-//    float vertices[] = {
-//        xCord, yCord, 0.0f
-//    };
-//    //================================================openGL pipeline============================================
-//    //STEP 1 
-//    //Vertex Input
-//    glGenBuffers(1, &vertex_buffer);
-//    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-//    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-//
-//    glEnableVertexAttribArray(0);
-//    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-//    glPointSize(10);
-//    glDrawArrays(GL_POINTS, 0, 100 * 100);
-//    glDisableVertexAttribArray(0);
-//}
 
 
 void draw(float x, float y)
@@ -244,9 +196,12 @@ int main(void)
 
     //printf(*p)
 
+    
+
     while (!glfwWindowShouldClose(window))
     {
         float tStep = (((float)rand() / (float)(RAND_MAX)) * 0.1f);
+        printf("tStep Value: %f", tStep);
         float timeS = glfwGetTime();
         float deltaTime = timeS - time;
 
@@ -256,10 +211,16 @@ int main(void)
         //glViewport(0, 0, width, height);
         //glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(program);
+        // 
+        //Initilize all particles with a vector
+        addDensity(p, x, y, 1);
+        
+        addVelocity(p, 0.0f, 0.0f, x, y);
+
         x = x + tStep * deltaTime;
         y = y + tStep * deltaTime;
-        *p->vertX = x;
-        *p->vertY = y;
+        //*p->vertX = x;
+        //*p->vertY = y;
         
         if (x > 400.0f)
         {
@@ -267,7 +228,7 @@ int main(void)
         }
         for (int x = 0; x < p->size; x++)
         {
-            draw(*p->vertX, y);
+            draw(*p->VelX, *p->VelY);
         }
         
         //glDrawArrays(GL_POINT, 0, 1);
