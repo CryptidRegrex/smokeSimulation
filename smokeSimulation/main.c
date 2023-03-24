@@ -113,6 +113,13 @@ void addVelocity(Particle* quad, int x, int y, float xChange, float yChange) {
     quad->VelY[location] += yChange;
 }
 
+
+static void diffuse(int b, float* x, float* x0, float diff, float dt, int iter, int nodes)
+{
+    float a = dt * diff * (nodes - 2) * (nodes - 2);
+    lin_solve(b, x, x0, a, 1 + 6 * a, iter, nodes);
+}
+
 /// <summary>
 /// This function is setting the boundaries of the "Particles". Each particle is made up of an array of tiny "boxes" or points that contain
 /// vector information. The boundary's outter box is going to constantly match the outer array of boxes as to for the arrays to contain themselves.
@@ -127,10 +134,10 @@ static void setBoundaries(int b, float* x, int nodes) {
 
     for (int i = 1; i < nodes - 1; i++) {
         //we use i, 0 (0 being the top row of the array). 
-        //Basically we are saying if b == 2 or x then we want to create the exact opposite velocity that of course being the negative value.
-        x[point(i, 0)] = b == 2 ? -x[point(i, 1)] : x[point(i, 1)];
-        //The nodes - 1 is looking at the bottom of the array
-        x[point(i, nodes - 1)] = b == 2 ? -x[point(i, nodes - 2)] : x[point(i, nodes - 2)];
+        //Basically we are saying if b == 2 or y then we want to create the exact opposite velocity that of course being the negative value.
+        x[point(i, 0)] = b == 2 ? -x[point(i, 1)] : x[point(i, 1)]; //Looking at the y top row
+        //The nodes - 1 is looking at the bottom row of the array
+        x[point(i, nodes - 1)] = b == 2 ? -x[point(i, nodes - 2)] : x[point(i, nodes - 2)]; //Looking at the y bottom row
     }
 
 
@@ -145,6 +152,172 @@ static void setBoundaries(int b, float* x, int nodes) {
     x[point(nodes - 1, 0)] = 0.5f * (x[point(nodes - 2, 0)] + x[point(nodes - 1, 1)]);
     x[point(nodes - 1, nodes - 1)] = 0.5f * (x[point(nodes - 2, nodes - 1)] + x[point(nodes - 1, nodes - 2)]);
 
+}
+
+/// <summary>
+/// This method is going to handle solving for each value by taking a combination of each value next to it and 
+/// solving for the median
+/// </summary>
+/// <param name="b"></param>
+/// <param name="x"></param>
+/// <param name="x0"></param>
+/// <param name="a"></param>
+/// <param name="c"></param>
+/// <param name="iter"></param>
+/// <param name="nodes"></param>
+static void lin_solve(int b, float* x, float* x0, float a, float c, int iter, int nodes)
+{
+    float cRecip = 1.0 / c;
+    for (int k = 0; k < iter; k++) {
+        for (int j = 1; j < nodes - 1; j++) {
+            for (int i = 1; i < nodes - 1; i++) {
+                x[point(i, j)] =
+                    (x0[point(i, j)]
+                        + a * (x[point(i + 1, j)]
+                            + x[point(i - 1, j)]
+                            + x[point(i, j + 1)]
+                            + x[point(i, j - 1)]
+                            )) * cRecip;
+            }
+        }
+        setBoundaries(b, x, nodes);
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="velocX"></param>
+/// <param name="velocY"></param>
+/// <param name="p"></param>
+/// <param name="div"></param>
+/// <param name="iter"></param>
+/// <param name="nodes"></param>
+static void project(float* velocX, float* velocY, float* p, float* div, int iter, int nodes)
+{
+
+    for (int j = 1; j < nodes - 1; j++) {
+        for (int i = 1; i < nodes - 1; i++) {
+            div[point(i, j)] = -0.5f * (
+                velocX[point(i + 1, j)]
+                - velocX[point(i - 1, j)]
+                + velocY[point(i, j + 1)]
+                - velocY[point(i, j - 1)]
+                ) / nodes;
+            p[point(i, j)] = 0;
+        }
+    }
+
+    setBoundaries(0, div, nodes);
+    setBoundaries(0, p, nodes);
+    lin_solve(0, p, div, 1, 6, iter, nodes);
+
+    for (int j = 1; j < nodes - 1; j++) {
+        for (int i = 1; i < nodes - 1; i++) {
+            velocX[point(i, j)] -= 0.5f * (p[point(i + 1, j)]
+                - p[point(i - 1, j)]) * nodes;
+            velocY[point(i, j)] -= 0.5f * (p[point(i, j + 1)]
+                - p[point(i, j - 1)]) * nodes;
+        }
+    }
+
+    setBoundaries(1, velocX, nodes);
+    setBoundaries(2, velocY, nodes);
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="b"></param>
+/// <param name="d"></param>
+/// <param name="d0"></param>
+/// <param name="velocX"></param>
+/// <param name="velocY"></param>
+/// <param name="dt"></param>
+/// <param name="nodes"></param>
+static void advect(int b, float* d, float* d0, float* velocX, float* velocY,  float dt, int nodes)
+{
+    float i0, i1, j0, j1;
+
+    float dtx = dt * (nodes - 2);
+    float dty = dt * (nodes - 2);
+
+    float s0, s1, t0, t1;
+    float tmp1, tmp2, x, y;
+
+    float Nfloat = nodes;
+    float ifloat, jfloat;
+    int i, j;
+
+
+    for (j = 1, jfloat = 1; j < nodes - 1; j++, jfloat++) {
+        for (i = 1, ifloat = 1; i < nodes - 1; i++, ifloat++) {
+            tmp1 = dtx * velocX[point(i, j)];
+            tmp2 = dty * velocY[point(i, j)];
+            x = ifloat - tmp1;
+            y = jfloat - tmp2;
+
+            if (x < 0.5f) x = 0.5f;
+            if (x > Nfloat + 0.5f) x = Nfloat + 0.5f;
+            i0 = floorf(x);
+            i1 = i0 + 1.0f;
+            if (y < 0.5f) y = 0.5f;
+            if (y > Nfloat + 0.5f) y = Nfloat + 0.5f;
+            j0 = floorf(y);
+            j1 = j0 + 1.0f;
+
+
+            s1 = x - i0;
+            s0 = 1.0f - s1;
+            t1 = y - j0;
+            t0 = 1.0f - t1;
+
+
+            int i0i = i0;
+            int i1i = i1;
+            int j0i = j0;
+            int j1i = j1;
+
+
+            d[point(i, j)] =
+                s0 * (t0 * d0[point(i0i, j0i)])
+                + (t1 * d0[point(i0i, j0i)])
+                + s1 * (t0 * d0[point(i1i, j1i)])
+                + (t1 * d0[point(i1i, j1i)]);
+
+        }
+    }
+
+    setBoundaries(b, d, nodes);
+}
+
+
+void particleStep(Particle* quad)
+{
+    int nodes = quad->size;
+    float visc = quad->viscosity;
+    float diff = quad->diffusion;
+    float dt = quad->timeStep;
+    float* Vx = quad->VelX;
+    float* Vy = quad->VelY;
+    float* Vx0 = quad->VelX0;
+    float* Vy0 = quad->VelY0;
+    float* s = quad->density0;
+    float* density = quad->density;
+
+    diffuse(1, Vx0, Vx, visc, dt, 4, nodes);
+    diffuse(2, Vy0, Vy, visc, dt, 4, nodes);
+
+    project(Vx0, Vy0, Vx, Vy, 4, nodes);
+
+    advect(1, Vx, Vx0, Vx0, Vy0, dt, nodes);
+    advect(2, Vy, Vy0, Vx0, Vy0, dt, nodes);
+
+
+    project(Vx, Vy, Vx0, Vy0, 4, nodes);
+
+    diffuse(0, s, density, diff, dt, 4, nodes);
+    advect(0, density, s, Vx, Vy,  dt, nodes);
 }
 
 createVertexShader()
@@ -192,11 +365,13 @@ void draw(float x, float y)
     glDisableVertexAttribArray(0);
 }
 
+
 int main(void)
 {
 
 
     Particle* p = ParticleCreation(256, 1, 0, 0);
+    particleStep(p);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(error_callback);
