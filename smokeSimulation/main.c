@@ -97,12 +97,54 @@ void addDensity(Particle* quad, int x, int y, float amount) {
     quad->density[point(x, y)] += amount;
 }
 
+/// <summary>
+/// This function is going to be the 
+/// </summary>
+/// <param name="quad"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="xChange"></param>
+/// <param name="yChange"></param>
 void addVelocity(Particle* quad, int x, int y, float xChange, float yChange) {
     int nodes = quad->size;
     int location = point(x, y);
 
     quad->VelX[location] += xChange;
     quad->VelY[location] += yChange;
+}
+
+/// <summary>
+/// This function is setting the boundaries of the "Particles". Each particle is made up of an array of tiny "boxes" or points that contain
+/// vector information. The boundary's outter box is going to constantly match the outer array of boxes as to for the arrays to contain themselves.
+/// </summary>
+/// <param name="b"></param>
+/// <param name="x"></param>
+/// <param name="nodes"></param>
+
+static void setBoundaries(int b, float* x, int nodes) {
+
+    //handles boundaries for x axis
+
+    for (int i = 1; i < nodes - 1; i++) {
+        //we use i, 0 (0 being the top row of the array). 
+        //Basically we are saying if b == 2 or x then we want to create the exact opposite velocity that of course being the negative value.
+        x[point(i, 0)] = b == 2 ? -x[point(i, 1)] : x[point(i, 1)];
+        //The nodes - 1 is looking at the bottom of the array
+        x[point(i, nodes - 1)] = b == 2 ? -x[point(i, nodes - 2)] : x[point(i, nodes - 2)];
+    }
+
+
+    for (int j = 1; j < nodes - 1; j++) {
+        x[point(0, j)] = b == 1 ? -x[point(1, j)] : x[point(1, j)];
+        x[point(nodes - 1, j)] = b == 1 ? -x[point(nodes - 2, j)] : x[point(nodes - 2, j)];
+    }
+
+    //Sets bounds for and checks each outer column and row. This includes the corners
+    x[point(0, 0)] = 0.5f * (x[point(1, 0)] + x[point(0, 1)]);
+    x[point(0, nodes - 1)] = 0.5f * (x[point(1, nodes - 1)] + x[point(0, nodes - 2)]);
+    x[point(nodes - 1, 0)] = 0.5f * (x[point(nodes - 2, 0)] + x[point(nodes - 1, 1)]);
+    x[point(nodes - 1, nodes - 1)] = 0.5f * (x[point(nodes - 2, nodes - 1)] + x[point(nodes - 1, nodes - 2)]);
+
 }
 
 createVertexShader()
