@@ -8,12 +8,11 @@
 #include "linmath.h"
 
 
-
-
-
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 512;
+const unsigned int SCR_HEIGHT = 512;
+
+float mouseX, mouseY, mouseX0, mouseY0;
 
 float i = 0.0f;
 
@@ -51,9 +50,8 @@ struct Particle {
 
 typedef struct Particle Particle;
 
-Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) {
+Particle* ParticleCreation(int nodes, int diffusion, int viscosity, float timeS) {
     Particle* quad = malloc(sizeof(*quad));
-    int nodes = size;
 
     quad->size = nodes;
     quad->timeStep = timeS;
@@ -95,6 +93,11 @@ Particle* ParticleCreation(int size, int diffusion, int viscosity, float timeS) 
 void addDensity(Particle* quad, int x, int y, float amount) {
     int nodes = quad->size;
     quad->density[point(x, y)] += amount;
+    //for (int x = 0; x < nodes; x++)
+    //{
+    //    printf("densityAFTER: %f\n", *quad->density);
+    //    printf("densityBEFORE: %f\n", *quad->density0);
+    //}
 }
 
 /// <summary>
@@ -111,13 +114,6 @@ void addVelocity(Particle* quad, int x, int y, float xChange, float yChange) {
 
     quad->VelX[location] += xChange;
     quad->VelY[location] += yChange;
-}
-
-
-static void diffuse(int b, float* x, float* x0, float diff, float dt, int iter, int nodes)
-{
-    float a = dt * diff * (nodes - 2) * (nodes - 2);
-    lin_solve(b, x, x0, a, 1 + 6 * a, iter, nodes);
 }
 
 /// <summary>
@@ -154,6 +150,7 @@ static void setBoundaries(int b, float* x, int nodes) {
 
 }
 
+
 /// <summary>
 /// This method is going to handle solving for each value by taking a combination of each value next to it and 
 /// solving for the median
@@ -168,21 +165,26 @@ static void setBoundaries(int b, float* x, int nodes) {
 static void lin_solve(int b, float* x, float* x0, float a, float c, int iter, int nodes)
 {
     float cRecip = 1.0 / c;
-    for (int k = 0; k < iter; k++) {
-        for (int j = 1; j < nodes - 1; j++) {
-            for (int i = 1; i < nodes - 1; i++) {
-                x[point(i, j)] =
-                    (x0[point(i, j)]
-                        + a * (x[point(i + 1, j)]
-                            + x[point(i - 1, j)]
-                            + x[point(i, j + 1)]
-                            + x[point(i, j - 1)]
-                            )) * cRecip;
-            }
+    for (int j = 1; j < nodes - 1; j++) {
+        for (int i = 1; i < nodes - 1; i++) {
+            x[point(i, j)] =
+                (x0[point(i, j)]
+                    + a * (x[point(i + 1, j)]
+                        + x[point(i - 1, j)]
+                        + x[point(i, j + 1)]
+                        + x[point(i, j - 1)]
+                        )) * cRecip;
         }
-        setBoundaries(b, x, nodes);
     }
+    setBoundaries(b, x, nodes);
 }
+
+static void diffuse(int b, float* x, float* x0, float diff, float dt, int iter, int nodes)
+{
+    float a = dt * diff * (nodes - 2) * (nodes - 2);
+    lin_solve(b, x, x0, a, 1 + 6 * a, iter, nodes);
+}
+
 
 /// <summary>
 /// 
@@ -287,7 +289,6 @@ static void advect(int b, float* d, float* d0, float* velocX, float* velocY,  fl
 
         }
     }
-
     setBoundaries(b, d, nodes);
 }
 
@@ -320,11 +321,9 @@ void particleStep(Particle* quad)
     advect(0, density, s, Vx, Vy,  dt, nodes);
 }
 
-createVertexShader()
-{
-
-}
-
+//void renderValues() {
+//    for (int i = 0; i < p->size)
+//}
 
 
 
@@ -342,14 +341,37 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 }
 
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    //float xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    mouseX = xpos;
+    mouseY = ypos;
+    //printf("x and y position of mouse: %f, %f\n", xpos, ypos);
+}
 
 
-void draw(float x, float y)
+
+
+void draw(Particle* p)
 {
     GLuint vertex_buffer, vertex_shader, fragment_shader, program;
     // GLint mvp_location, vpos_location, vcol_location;
+
+    //For rendering densities
+    //for (int i = 0; i < p->size; i++)
+    //{
+    //    for (int j = 0; j < p->size; i++)
+    //    {
+    //        int nodes = p->size;
+    //        int x = SCR_WIDTH;
+    //        int y = SCR_WIDTH;
+    //        int d = p->density[point(x, y)];
+    //    }
+    //}
+
     float vertices[] = {
-        x, y, 0.0f
+        300.0f, 300.0f, 0.0f
     };
     //================================================openGL pipeline============================================
     //STEP 1 
@@ -357,7 +379,7 @@ void draw(float x, float y)
     glGenBuffers(1, &vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-
+    
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glPointSize(10);
@@ -369,9 +391,8 @@ void draw(float x, float y)
 int main(void)
 {
 
-
-    Particle* p = ParticleCreation(256, 1, 0, 0);
-    particleStep(p);
+    Particle* p = ParticleCreation(256, 0, 0, 0.1f);
+    
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(error_callback);
@@ -384,8 +405,6 @@ int main(void)
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window;
-
-
 
     // glfw window creation
     // --------------------
@@ -408,45 +427,100 @@ int main(void)
     //setting up time
     float time = glfwGetTime();
     float speed = .1f;
-    float x = 0.0f, y = 0.0f, z = 0.0f;
-    //vert* v = setupVerts(i, i, i, i, i);
-
-    //printf(*p)
+    float x = 0.1f, y = 0.1f, z = 0.0f;
 
     
 
     while (!glfwWindowShouldClose(window))
     {
         float tStep = (((float)rand() / (float)(RAND_MAX)) * 0.1f);
-        printf("tStep Value: %f", tStep);
+        //printf("tStep Value: %f", tStep);
         float timeS = glfwGetTime();
         float deltaTime = timeS - time;
+        int bool = 1;
+
+
 
         //Point
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
+        glfwSetCursorPosCallback(window, cursor_position_callback);
+        //glfwGetCursorPos(window, &xpos, &ypos);
+        //printf("x and y position of mouse: %f, %f\n", xpos, ypos);
+
+
+
+        for (int i = 0; i < p->size; i++)
+        {
+            addDensity(p, mouseX, mouseY, 100.0f);
+            mouseX0 = mouseX;
+            mouseY0 = mouseY;
+            glfwSetCursorPosCallback(window, cursor_position_callback);
+            float preX = mouseX - mouseX0;
+            float preY = mouseY - mouseY0;
+            addVelocity(p, mouseX, mouseY, preX, preY);
+        }
+
+        for (int i = 0; i < p->size; i++)
+        {
+            printf("Test density %f, \n", p->density[i]);
+        }
+        //addDensity(p, mouseX, mouseY, 100.0f);
+        //mouseX0 = mouseX;
+        //mouseY0 = mouseY;
+        //glfwSetCursorPosCallback(window, cursor_position_callback);
+        //float preX = mouseX - mouseX0;
+        //float preY = mouseY - mouseY0;
+        //addVelocity(p, mouseX, mouseY, preX, preY);
+        //printf("mouseX, mouseX0, mouseY, mouseY0: %f, %f, %f, %f\n", mouseX, mouseX0, mouseY, mouseY0);
+
+
+
+
         //glViewport(0, 0, width, height);
         //glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(program);
-        // 
-        //Initilize all particles with a vector
-        addDensity(p, x, y, 1);
-        
-        addVelocity(p, 0.0f, 0.0f, x, y);
 
-        x = x + tStep * deltaTime;
-        y = y + tStep * deltaTime;
+        //Initilize all particles with a vector
+        //addVelocity(p, x, y, x+0.1f, y+0.1f);
+
+        //x = x + tStep * deltaTime;
+        //y = y + tStep * deltaTime;
         //*p->vertX = x;
         //*p->vertY = y;
+
+        particleStep(p);
+        //printf("densityAFTER: %f\n", *p->density);
+        //printf("densityBEFORE: %f\n", *p->density0);
+        for (int i = 0; i < p->size; i++)
+        {
+            printf("Test density %f, \n", p->density[i]);
+        }
+        //for (int x = 0; x < p->size; x++)
+        //{
+        //    printf("densityAFTER: %f\n", *p->density);
+        //    printf("densityBEFORE: %f\n", *p->density0);
+        //}
+
+        //particleStep(p);
+        //while (bool == 1)
+        //{
+            //printf("Value of size in particle %d\n", p->size);
+        draw(p);
+        //}
         
-        if (x > 400.0f)
-        {
-            x = 0.0f;
-        }
-        for (int x = 0; x < p->size; x++)
-        {
-            draw(*p->VelX, *p->VelY);
-        }
+        //printf("velocities of x and y: %f, %f\n", *p->VelX, *p->VelY);
+        //printf("Densities after and before: %f, %f\n", *p->density, *p->density0);
+
+        
+        //if (x > 400.0f)
+        //{
+        //    x = 0.0f;
+        //}
+        //for (int x = 0; x < p->size; x++)
+        //{
+        //    draw(*p->VelX, *p->VelY);
+        //}
         
         //glDrawArrays(GL_POINT, 0, 1);
 
