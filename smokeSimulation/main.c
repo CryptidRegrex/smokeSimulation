@@ -15,6 +15,8 @@ const unsigned int SCR_HEIGHT = 512;
 float mouseX, mouseY, mouseX0, mouseY0;
 
 float i = 0.0f;
+FILE* filename;
+
 
 struct Particle {
 
@@ -92,7 +94,10 @@ Particle* ParticleCreation(int nodes, int diffusion, int viscosity, float timeS)
 
 void addDensity(Particle* quad, int x, int y, float amount) {
     int nodes = quad->size;
+
     quad->density[point(x, y)] += amount;
+    printf("mouseX, mouseY %f, %f \n", x, y);
+    //printf("point x y, %f \n", point(x, y));
     //for (int x = 0; x < nodes; x++)
     //{
     //    printf("densityAFTER: %f\n", *quad->density);
@@ -114,6 +119,8 @@ void addVelocity(Particle* quad, int x, int y, float xChange, float yChange) {
 
     quad->VelX[location] += xChange;
     quad->VelY[location] += yChange;
+
+    //printf("VelX and VelY change: %f, %f: \n", quad->VelX[location], quad->VelY[location]);
 }
 
 /// <summary>
@@ -345,9 +352,9 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 {
     //float xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
-    mouseX = xpos;
-    mouseY = ypos;
-    //printf("x and y position of mouse: %f, %f\n", xpos, ypos);
+    mouseX = (float) xpos;
+    mouseY = (float) ypos;
+    //printf("x and y position of mouse: %f, %f, %f, %f\n", xpos, ypos, mouseX, mouseY);
 }
 
 
@@ -390,8 +397,17 @@ void draw(Particle* p)
 
 int main(void)
 {
+    //Setting up file for disection of information 
 
-    Particle* p = ParticleCreation(256, 0, 0, 0.1f);
+    errno_t file_error;
+
+    file_error = fopen_s(&filename, "test.txt", "w+");
+    //if (file_error = !0) {
+    //    printf("Error opening file");
+    //    return -1;
+    //}
+
+    Particle* p = ParticleCreation(512, 0, 0, 0.1f);
     
     // glfw: initialize and configure
     // ------------------------------
@@ -427,12 +443,18 @@ int main(void)
     //setting up time
     float time = glfwGetTime();
     float speed = .1f;
-    float x = 0.1f, y = 0.1f, z = 0.0f;
+    
 
     
 
     while (!glfwWindowShouldClose(window))
     {
+        float x = mouseX, y = mouseY, z = 0.0f;
+
+        p->timeStep = (float) glfwGetTime();
+
+        //printf("Timestep %f: \n", p->timeStep);
+
         float tStep = (((float)rand() / (float)(RAND_MAX)) * 0.1f);
         //printf("tStep Value: %f", tStep);
         float timeS = glfwGetTime();
@@ -448,11 +470,17 @@ int main(void)
         //glfwGetCursorPos(window, &xpos, &ypos);
         //printf("x and y position of mouse: %f, %f\n", xpos, ypos);
 
+        //*p->density = mouseX;
+        //int nodes = p->size;
+        //printf("Test density %f \n", p->density[0]);
 
+        //printf("Testing point(x,y), x, and y %f, %f, %f \n", point(x, y), x, y);
 
         for (int i = 0; i < p->size; i++)
         {
+            
             addDensity(p, mouseX, mouseY, 100.0f);
+            //printf("mouseX, mouseY %f, %f \n",  mouseX, mouseY);
             mouseX0 = mouseX;
             mouseY0 = mouseY;
             glfwSetCursorPosCallback(window, cursor_position_callback);
@@ -461,10 +489,10 @@ int main(void)
             addVelocity(p, mouseX, mouseY, preX, preY);
         }
 
-        for (int i = 0; i < p->size; i++)
-        {
-            printf("Test density %f, \n", p->density[i]);
-        }
+        //for (int i = 0; i < p->size; i++)
+        //{
+        //    printf("Test density %f, \n", p->density[i]);
+        //}
         //addDensity(p, mouseX, mouseY, 100.0f);
         //mouseX0 = mouseX;
         //mouseY0 = mouseY;
@@ -492,10 +520,10 @@ int main(void)
         particleStep(p);
         //printf("densityAFTER: %f\n", *p->density);
         //printf("densityBEFORE: %f\n", *p->density0);
-        for (int i = 0; i < p->size; i++)
-        {
-            printf("Test density %f, \n", p->density[i]);
-        }
+        //for (int i = 0; i < p->size; i++)
+        //{
+        //    printf("Test density %f, \n", p->density[i]);
+        //}
         //for (int x = 0; x < p->size; x++)
         //{
         //    printf("densityAFTER: %f\n", *p->density);
