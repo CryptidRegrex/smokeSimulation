@@ -8,16 +8,6 @@
 #include "linmath.h"
 
 
-// settings
-const unsigned int SCR_WIDTH = 512;
-const unsigned int SCR_HEIGHT = 512;
-
-float mouseX, mouseY, mouseX0, mouseY0;
-
-float i = 0.0f;
-FILE* filename;
-
-
 struct Particle {
 
     //All of this will be needed to create our particles value
@@ -41,7 +31,7 @@ struct Particle {
 
     //location of particle
     float* vertX;
-    float* vertY; 
+    float* vertY;
 
     //color of particle
     float* r;
@@ -50,7 +40,37 @@ struct Particle {
 
 };
 
+//Struct prototypes
 typedef struct Particle Particle;
+
+
+//Function prototypes
+Particle* ParticleCreation(int nodes, int diffusion, int viscosity, float timeS);
+void addDensity(Particle* quad, int x, int y, float amount);
+void addVelocity(Particle* quad, int x, int y, float xChange, float yChange);
+static void lin_solve(int b, float* x, float* x0, float a, float c, int iter, int nodes);
+static void diffuse(int b, float* x, float* x0, float diff, float dt, int iter, int nodes);
+static void project(float* velocX, float* velocY, float* p, float* div, int iter, int nodes);
+static void advect(int b, float* d, float* d0, float* velocX, float* velocY, float dt, int nodes);
+void particleStep(Particle* quad);
+static void error_callback(int error, const char* description);
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
+
+
+
+
+
+//Global settings
+const unsigned int SCR_WIDTH = 512;
+const unsigned int SCR_HEIGHT = 512;
+
+float mouseX, mouseY, mouseX0, mouseY0;
+
+float i = 0.0f;
+FILE* filename;
+
+
+
 
 Particle* ParticleCreation(int nodes, int diffusion, int viscosity, float timeS) {
     Particle* quad = malloc(sizeof(*quad));
