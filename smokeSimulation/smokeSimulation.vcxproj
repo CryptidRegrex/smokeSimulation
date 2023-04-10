@@ -141,6 +141,8 @@
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="A:\MY Documents\Programming Libs\C++\glad\include\glad\glad.h" />
+    <ClInclude Include="A:\MY Documents\Programming Libs\C++\glfw-3.3.8.bin.WIN64\include\GLFW\glfw3.h" />
     <ClInclude Include="linmath.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
